@@ -1,0 +1,103 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Download, RefreshCcw, ShieldCheck, ArrowRightLeft, Menu } from "lucide-react";
+
+export default function App() {
+  const [log, setLog] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [data, setData] = useState(null);
+
+  const addLog = (msg, type = "INFO") => {
+    setLog((prev) => [...prev, `${new Date().toLocaleTimeString()} [${type}] ${msg}`]);
+  };
+
+  const simulateFSLS = () => {
+    const simulated = { ip: "104.16.103.112", comm: true, context: "economy" };
+    setData(simulated);
+    addLog("FSLS procesado con IP y contexto económico.");
+  };
+
+  const simulateSecureTransmission = () => {
+    if (!data) return addLog("No hay datos disponibles para transmitir.", "ERROR");
+    const message = `MISSAJES:${JSON.stringify({ ...data, TTL: 60 })}`;
+    const failed = Math.random() < 0.1;
+    if (failed) return addLog("Error de red al transmitir mensaje.", "ERROR");
+    addLog("Mensaje transmitido de forma segura a RX-2048.");
+  };
+
+  const simulateTransaction = (market) => {
+    const order = { ticker: "SAN", cantidad: 100, hora: new Date().toLocaleTimeString(), mercado: market };
+    setTransactions((prev) => [...prev, order]);
+    addLog(`Orden enviada a ${market}: ${order.ticker}, 100 unidades.`);
+  };
+
+  const exportData = (format) => {
+    const blob = new Blob([
+      format === "json"
+        ? JSON.stringify(transactions, null, 2)
+        : ["ticker,cantidad,hora,mercado", ...transactions.map(t => `${t.ticker},${t.cantidad},${t.hora},${t.mercado}`)].join("\n")
+    ], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transacciones.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <div className="w-64 bg-gray-900 text-white p-6 space-y-4">
+        <h2 className="text-2xl font-bold mb-6">Panel de Control</h2>
+        <Button variant="ghost" className="w-full justify-start" onClick={simulateFSLS}>Iniciar FSLS</Button>
+        <Button variant="ghost" className="w-full justify-start" onClick={simulateSecureTransmission}>Transmitir Seguro</Button>
+        <Button variant="ghost" className="w-full justify-start" onClick={() => simulateTransaction("Bolsa de Madrid")}>Enviar a Bolsa Madrid</Button>
+        <Button variant="ghost" className="w-full justify-start" onClick={() => simulateTransaction("Nasdaq")}>Enviar a Nasdaq</Button>
+        <hr className="border-gray-600" />
+        <Button variant="ghost" className="w-full justify-start" onClick={() => exportData("csv")}>Exportar CSV</Button>
+        <Button variant="ghost" className="w-full justify-start" onClick={() => exportData("json")}>Exportar JSON</Button>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+        <h1 className="text-3xl font-bold">Sistema de Transmisión Segura</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="p-4 max-h-96 overflow-y-auto bg-black text-green-400 font-mono text-sm">
+              <h2 className="text-xl font-semibold text-white mb-2">Consola del Sistema</h2>
+              {log.map((entry, idx) => <div key={idx}>{entry}</div>)}
+            </CardContent>
+          </Card>
+        </div>
+        <Card>
+          <CardContent className="p-4">
+            <h2 className="text-xl font-semibold">Histórico de Transacciones</h2>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ticker</TableHead>
+                  <TableHead>Cantidad</TableHead>
+                  <TableHead>Hora</TableHead>
+                  <TableHead>Mercado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((t, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{t.ticker}</TableCell>
+                    <TableCell>{t.cantidad}</TableCell>
+                    <TableCell>{t.hora}</TableCell>
+                    <TableCell>{t.mercado}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
